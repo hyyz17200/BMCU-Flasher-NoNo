@@ -123,7 +123,8 @@ On Linux/macOS use `bash ./gradlew` instead. The APK is written to
 `android/app/build/outputs/apk/release/app-release.apk`.
 
 GitHub Actions: **Android APK** builds on Android/i18n branch changes and pull
-requests, and supports **Run workflow**. Download the APK and SHA-256 from the
+requests. Once the workflow is on the default branch, it also supports
+**Run workflow**. Download the APK and SHA-256 from the
 `BMCU-Flasher-NoNo-android` artifact; test/lint reports are a separate artifact.
 The existing `v*` tag workflow also builds the APK alongside desktop releases.
 
