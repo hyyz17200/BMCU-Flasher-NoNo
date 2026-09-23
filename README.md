@@ -45,7 +45,7 @@ Cross-platform flasher for BMCU (WCH ISP protocol).
 - Android:
   - USB (CH340 + USB OTG)
   - TTL (external USB-Serial, manual BOOT + RESET)
-  - Online flash only (no local .bin picker)
+  - Online firmware or custom local `.bin` files (system file picker)
   - App language follows system language
 
 ## Download
@@ -97,8 +97,41 @@ Android:
 - Choose USB or TTL mode
 - USB mode: plug BMCU via USB OTG
 - TTL mode: connect external USB-Serial adapter and enter BOOTloader manually
-- Select firmware options
+- Choose the firmware source: online options or **Local BIN file**
+- For a local BIN, tap **Choose .bin file** and check the filename, size and SHA-256
 - Click "Flash"
+
+Local BIN mode works with both USB and TTL and does not download firmware. The
+selected bytes are held as a snapshot; online force/slot/retract/RGB/autoload
+settings do not modify the file. Cancelling the picker keeps the previous
+selection; a failed import clears it. The original document is never deleted.
+Empty files and images above 65,520 bytes are rejected before opening the serial
+port: the existing 56-byte ISP transfers must fit in the board's 64 KiB flash.
+This size check does not identify whether a firmware image matches your board.
+
+## Building Android
+
+Use JDK 17 or newer, Android SDK platform 35 and the checked-in Gradle 9.1.0 wrapper.
+Set `ANDROID_HOME` to your SDK directory (or use `android/local.properties`).
+
+```powershell
+cd android
+.\gradlew.bat :app:testDebugUnitTest :app:lintDebug :app:assembleRelease
+```
+
+On Linux/macOS use `bash ./gradlew` instead. The APK is written to
+`android/app/build/outputs/apk/release/app-release.apk`.
+
+GitHub Actions: **Android APK** builds on Android/i18n branch changes and pull
+requests, and supports **Run workflow**. Download the APK and SHA-256 from the
+`BMCU-Flasher-NoNo-android` artifact; test/lint reports are a separate artifact.
+The existing `v*` tag workflow also builds the APK alongside desktop releases.
+
+These are test APKs signed with the builder's debug key, as in the original
+project. Local and GitHub builds can have different signing certificates; if
+Android reports an incompatible signature, uninstall the previous test app
+before installing (this clears its app data). Stable release signing requires
+a persistent private signing key and is not configured here.
 
 CLI (optional):
 - USB (auto port by VID/PID):

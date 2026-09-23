@@ -9,6 +9,8 @@ import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Bundle
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.text.method.LinkMovementMethod
 import android.text.util.Linkify
 import android.view.View
@@ -18,6 +20,8 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.pjarczak.bmcuflasher.databinding.ActivityMainBinding
@@ -42,6 +46,11 @@ class MainActivity : AppCompatActivity() {
 
   private val devs = ArrayList<DevItem>()
   private var flashing = false
+  private var importing = false
+  private var localFirmware: LocalFirmware? = null
+  private val pickBin = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    if (uri != null) importBin(uri)
+  }
 
   private val LOG_MAX_CHARS = 200_000
   private val LOG_TRIM_CHARS = 60_000
@@ -96,6 +105,13 @@ class MainActivity : AppCompatActivity() {
 
     applyTexts()
     setupSelectors()
+    savedInstanceState?.getByteArray("localBytes")?.let { bytes ->
+      if (bytes.size in 1..LocalFirmware.MAX_BYTES) {
+        localFirmware = LocalFirmware(savedInstanceState.getString("localName") ?: "firmware.bin", bytes)
+      }
+    }
+    b.spnSource.setSelection(savedInstanceState?.getInt("source") ?: 0)
+    updateSourceUi()
 
     b.txtLinks.text = "App: $APP_URL\nFirmware: $FW_URL"
     Linkify.addLinks(b.txtLinks, Linkify.WEB_URLS)
@@ -105,13 +121,17 @@ class MainActivity : AppCompatActivity() {
 
     b.btnRefresh.setOnClickListener { refreshDevices() }
     b.btnFlash.setOnClickListener { startFlash() }
+    b.btnPickBin.setOnClickListener {
+      // BIN files have inconsistent MIME types across Android document providers.
+      try { pickBin.launch(arrayOf("*/*")) } catch (e: Exception) { showImportError(e) }
+    }
 
     val f = IntentFilter().apply {
       addAction(ACTION_USB_PERMISSION)
       addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
       addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
     }
-    if (Build.VERSION.SDK_INT >= 33) registerReceiver(rx, f, Context.RECEIVER_NOT_EXPORTED) else registerReceiver(rx, f)
+    ContextCompat.registerReceiver(this, rx, f, ContextCompat.RECEIVER_NOT_EXPORTED)
 
     applyModeUi()
     refreshDevices()
@@ -120,6 +140,71 @@ class MainActivity : AppCompatActivity() {
   override fun onDestroy() {
     try { unregisterReceiver(rx) } catch (_: Throwable) {}
     super.onDestroy()
+  }
+
+  override fun onSaveInstanceState(outState: Bundle) {
+    super.onSaveInstanceState(outState)
+    outState.putInt("source", b.spnSource.selectedItemPosition)
+    localFirmware?.let {
+      outState.putString("localName", it.name)
+      outState.putByteArray("localBytes", it.bytes)
+    }
+  }
+
+  private fun isLocalSource() = b.spnSource.selectedItemPosition == 1
+
+  private fun updateSourceUi() {
+    b.localPanel.visibility = if (isLocalSource()) View.VISIBLE else View.GONE
+    b.onlinePanel.visibility = if (isLocalSource()) View.GONE else View.VISIBLE
+    b.txtLocalFile.text = if (importing) i18n.t("android_bin_loading") else localFirmware?.let {
+      "${it.name}\n${it.bytes.size} bytes\nSHA-256: ${it.sha256}"
+    } ?: i18n.t("android_bin_none")
+    b.btnFlash.isEnabled = !flashing && !importing && (!isLocalSource() || localFirmware != null)
+  }
+
+  private fun setControlsEnabled(enabled: Boolean) {
+    listOf(b.spnSource, b.btnPickBin, b.spnMode, b.spnAdapter, b.spnDevice,
+      b.btnRefresh, b.spnForce, b.spnSlot, b.spnRetract, b.chkAutoload,
+      b.chkRgb, b.chkNoFast).forEach { it.isEnabled = enabled }
+    updateSourceUi()
+  }
+
+  private fun showImportError(e: Exception) {
+    val detail = i18n.t(e.message ?: "err_generic")
+    log("ERROR", detail)
+    Toast.makeText(this, "${i18n.t("android_bin_failed")}: $detail", Toast.LENGTH_LONG).show()
+  }
+
+  private fun importBin(uri: Uri) {
+    if (flashing || importing) return
+    // Clear an earlier selection so a failed replacement cannot flash stale bytes.
+    localFirmware = null
+    importing = true
+    setControlsEnabled(false)
+    thread(name = "bin-import", isDaemon = true) {
+      try {
+        val name = contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+          if (cursor.moveToFirst()) cursor.getString(0) else null
+        } ?: throw IllegalArgumentException("android_bin_extension")
+        val firmware = contentResolver.openInputStream(uri)?.use { LocalFirmware.read(name, it) }
+          ?: throw IllegalArgumentException("android_bin_failed")
+        runOnUiThread {
+          if (!isDestroyed) {
+            localFirmware = firmware
+            log("INFO", "local: ${firmware.name} (${firmware.bytes.size} bytes) SHA-256=${firmware.sha256}")
+          }
+        }
+      } catch (e: Exception) {
+        runOnUiThread { if (!isDestroyed) showImportError(e) }
+      } finally {
+        runOnUiThread {
+          if (!isDestroyed) {
+            importing = false
+            setControlsEnabled(true)
+          }
+        }
+      }
+    }
   }
 
   private fun applyTexts() {
@@ -132,6 +217,9 @@ class MainActivity : AppCompatActivity() {
     b.btnRefresh.text = i18n.t("android_refresh")
     b.btnFlash.text = i18n.t("android_flash")
     b.txtOnlineTitle.text = i18n.t("online_title")
+    b.txtSourceLabel.text = i18n.t("android_source")
+    b.btnPickBin.text = i18n.t("android_pick_bin")
+    b.txtLocalHint.text = i18n.t("android_local_hint")
     b.txtForceLabel.text = i18n.t("online_force_label")
     b.txtSlotLabel.text = i18n.t("online_slot_label")
     b.txtRetractLabel.text = i18n.t("online_retract_label")
@@ -145,6 +233,9 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun setupSelectors() {
+    b.spnSource.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item,
+      listOf(i18n.t("online_title"), i18n.t("android_local_bin")))
+    b.spnSource.onItemSelected { updateSourceUi() }
     b.spnMode.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf(i18n.t("mode_usb"), i18n.t("mode_ttl")))
     b.spnMode.setSelection(0)
     b.spnMode.onItemSelected {
@@ -323,8 +414,13 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun startFlash() {
-    if (flashing) {
+    if (flashing || importing) {
       Toast.makeText(this, i18n.t("android_busy"), Toast.LENGTH_SHORT).show()
+      return
+    }
+
+    if (isLocalSource() && localFirmware == null) {
+      Toast.makeText(this, i18n.t("android_bin_none"), Toast.LENGTH_LONG).show()
       return
     }
 
@@ -339,7 +435,8 @@ class MainActivity : AppCompatActivity() {
   }
 
   private fun startFlashImpl(dev: UsbDevice) {
-    if (flashing) return
+    if (flashing || importing) return
+    val local = if (isLocalSource()) localFirmware ?: return else null
 
     val mode = currentModeId()
     val force = currentForceId()
@@ -352,7 +449,7 @@ class MainActivity : AppCompatActivity() {
 
     flashing = true
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-    b.btnFlash.isEnabled = false
+    setControlsEnabled(false)
     b.pbar.progress = 0
     showTtlHint(false)
 
@@ -361,16 +458,21 @@ class MainActivity : AppCompatActivity() {
       var port: UsbSerialPort? = null
 
       try {
+        var onlineFile: File? = null
+        val fwBytes = if (local != null) {
+          log("INFO", "local: using ${local.name} (${local.bytes.size} bytes) SHA-256=${local.sha256}")
+          local.bytes
+        } else {
+          val sel = FirmwareSelector.build(force, slot, retract, autoload, rgb)
+          log("INFO", "online: selected ${sel.relPath}")
+          val (fwFile, ver) = RemoteFirmware.download(sel.relPath, File(cacheDir, "firmwares"), ::log, ::prog)
+          onlineFile = fwFile
+          log("INFO", "online: using $ver (${fwFile.name})")
+          fwFile.readBytes()
+        }
+        LocalFirmware.validateSize(fwBytes.size)
+        prog(0)
         if (!ensurePermission(dev)) throw RuntimeException(i18n.t("android_perm_denied"))
-
-        val sel = FirmwareSelector.build(force, slot, retract, autoload, rgb)
-        log("INFO", "online: selected ${sel.relPath}")
-        prog(0)
-
-        val fwCache = File(cacheDir, "firmwares")
-        val (fwFile, ver) = RemoteFirmware.download(sel.relPath, fwCache, ::log) { p -> prog(p) }
-        log("INFO", "online: using $ver (${fwFile.name})")
-        prog(0)
 
         val prober = UsbSerialProber.getDefaultProber()
         val driver = prober.probeDevice(dev) ?: throw RuntimeException(i18n.t("android_probe_fail"))
@@ -382,8 +484,6 @@ class MainActivity : AppCompatActivity() {
         if (mode == "usb") {
           try { port!!.setDTR(true); port!!.setRTS(true) } catch (_: Throwable) {}
         }
-
-        val fwBytes = fwFile.readBytes()
 
         log("INFO", "open port=${dev.deviceName} mode=$mode")
         if (mode == "usb") {
@@ -411,16 +511,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         try {
-          if (fwFile.isFile) {
-            fwFile.delete()
-            log("INFO", "online: cache removed (${fwFile.name})")
+          if (onlineFile?.isFile == true) {
+            onlineFile.delete()
+            log("INFO", "online: cache removed (${onlineFile.name})")
           }
         } catch (_: Throwable) {}
 
         runOnUiThread { Toast.makeText(this, i18n.t("android_done"), Toast.LENGTH_SHORT).show() }
       } catch (e: Throwable) {
-        log("ERROR", e.message ?: e.toString())
-        runOnUiThread { Toast.makeText(this, e.message ?: i18n.t("err_generic"), Toast.LENGTH_LONG).show() }
+        val detail = i18n.t(e.message ?: "err_generic")
+        log("ERROR", detail)
+        runOnUiThread { Toast.makeText(this, detail, Toast.LENGTH_LONG).show() }
       } finally {
         if (mode == "usb") {
           try { port?.setDTR(true); port?.setRTS(true) } catch (_: Throwable) {}
@@ -429,11 +530,11 @@ class MainActivity : AppCompatActivity() {
         try { conn?.close() } catch (_: Throwable) {}
 
         runOnUiThread {
-          b.btnFlash.isEnabled = true
+          flashing = false
+          setControlsEnabled(true)
           showTtlHint(false)
           window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
-        flashing = false
       }
     }
   }

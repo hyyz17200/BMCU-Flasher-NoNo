@@ -96,5 +96,15 @@
   "android_device_hint_ttl": "请通过 USB OTG 使用 USB-Serial 适配器。按所选适配器过滤，或使用 ALL。",
   "android_no_device_usb": "未找到 CH340 设备。请通过 USB OTG 连接 BMCU。",
   "android_no_device_ttl": "未找到兼容的 USB-Serial 适配器。请通过 USB OTG 连接适配器，或更改适配器过滤器。",
-  "android_log_title": "日志"
+  "android_log_title": "日志",
+  "android_source": "固件来源：",
+  "android_local_bin": "本地 BIN 文件",
+  "android_pick_bin": "选择 .bin 文件",
+  "android_local_hint": "直接刷写所选文件，无需下载固件，在线固件选项不适用。请选择适合当前 BMCU 板型的 BIN。最大 65,520 字节（64 KiB 闪存，按 56 字节补齐传输）。",
+  "android_bin_none": "请先选择 .bin 文件。",
+  "android_bin_loading": "正在读取 BIN 文件…",
+  "android_bin_empty": "BIN 文件为空。",
+  "android_bin_too_large": "固件超过 65,520 字节；补齐后的传输数据必须放入 64 KiB 闪存。",
+  "android_bin_extension": "请选择扩展名为 .bin 的文件。",
+  "android_bin_failed": "无法导入 BIN 文件"
 }

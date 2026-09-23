@@ -261,6 +261,7 @@ object BmcuFlasher {
     noFast: Boolean = false,
     verify: Boolean = true
   ) {
+    LocalFirmware.validateSize(firmware.size)
     fun l(level: String, msg: String) = log(level, msg)
 
     val blocks = (firmware.size + BMCU_CHUNK - 1) / BMCU_CHUNK
@@ -551,6 +552,7 @@ object BmcuFlasher {
     noFast: Boolean = false,
     verify: Boolean = true
   ) {
+    LocalFirmware.validateSize(firmware.size)
     fun l(level: String, msg: String) = log(level, msg)
 
     val blocks = (firmware.size + BMCU_CHUNK - 1) / BMCU_CHUNK

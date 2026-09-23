@@ -135,6 +135,54 @@
       android:background="@color/bmcu_divider"/>
 
     <TextView
+      android:id="@+id/txtSourceLabel"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textColor="@color/bmcu_fg"
+      android:textStyle="bold"/>
+
+    <Spinner
+      android:id="@+id/spnSource"
+      android:layout_width="match_parent"
+      android:layout_height="48dp"/>
+
+    <LinearLayout
+      android:id="@+id/localPanel"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:visibility="gone">
+
+      <Button
+        android:id="@+id/btnPickBin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/bmcu_fg"
+        android:background="@drawable/bmcu_button"/>
+
+      <TextView
+        android:id="@+id/txtLocalFile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/bmcu_fg"
+        android:textIsSelectable="true"/>
+
+      <TextView
+        android:id="@+id/txtLocalHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/bmcu_fg"/>
+    </LinearLayout>
+
+    <LinearLayout
+      android:id="@+id/onlinePanel"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical">
+
+    <TextView
       android:id="@+id/txtOnlineTitle"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
@@ -211,6 +259,8 @@
         android:text="RGB LED (filament color)"
         android:layout_marginStart="16dp"
         android:checked="true"/>
+    </LinearLayout>
+
     </LinearLayout>
 
     <CheckBox

@@ -1,10 +1,5 @@
 plugins {
   id("com.android.application")
-  id("org.jetbrains.kotlin.android") apply false
-}
-
-if (extensions.findByName("kotlin") == null) {
-  apply(plugin = "org.jetbrains.kotlin.android")
 }
 
 android {
@@ -15,8 +10,8 @@ android {
     applicationId = "com.pjarczak.bmcuflasher"
     minSdk = 21
     targetSdk = 35
-    versionCode = 130
-    versionName = "1.3"
+    versionCode = 131
+    versionName = "1.3.1-nono"
   }
 
   buildTypes {
@@ -47,6 +42,7 @@ android {
 }
 
 dependencies {
+  testImplementation("junit:junit:4.13.2")
   implementation("androidx.appcompat:appcompat:1.7.1")
   implementation("com.github.mik3y:usb-serial-for-android:3.10.0")
 }

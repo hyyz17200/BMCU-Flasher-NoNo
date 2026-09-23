@@ -96,5 +96,15 @@
   "android_device_hint_ttl": "Use a USB-Serial adapter via USB OTG. Filter by selected adapter or use ALL.",
   "android_no_device_usb": "No CH340 device found. Plug BMCU via USB OTG.",
   "android_no_device_ttl": "No compatible USB-Serial adapter found. Plug adapter via USB OTG or change adapter filter.",
-  "android_log_title": "Log"
+  "android_log_title": "Log",
+  "android_source": "Firmware source:",
+  "android_local_bin": "Local BIN file",
+  "android_pick_bin": "Choose .bin file",
+  "android_local_hint": "Flash the selected file as-is, without downloading firmware. Online variant options do not apply. Use a BIN for your BMCU board. Maximum: 65,520 bytes (64 KiB flash with 56-byte transfer padding).",
+  "android_bin_none": "Choose a .bin file before flashing.",
+  "android_bin_loading": "Reading BIN file...",
+  "android_bin_empty": "The BIN file is empty.",
+  "android_bin_too_large": "Firmware exceeds 65,520 bytes; padded transfers must fit the 64 KiB flash.",
+  "android_bin_extension": "Please select a file with a .bin extension.",
+  "android_bin_failed": "Cannot import BIN file"
 }

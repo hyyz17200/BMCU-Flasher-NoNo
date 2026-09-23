@@ -181,16 +181,14 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Gradle 9.1.0
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "9.1.0"
 
       - name: Build APK (release)
         shell: bash
         run: |
           set -euo pipefail
-          gradle -p android :app:assembleRelease
+          bash android/gradlew -p android :app:testDebugUnitTest :app:lintDebug :app:assembleRelease
           cp -v android/app/build/outputs/apk/release/app-release.apk BMCU-Flasher-android.apk
           ls -lah BMCU-Flasher-android.apk
 

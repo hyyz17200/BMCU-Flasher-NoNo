@@ -7,6 +7,7 @@ import java.util.Locale
 
 class I18n(ctx: Context) {
   private val map: JSONObject
+  private val fallback = JSONObject(ctx.assets.open("en.json").bufferedReader(Charsets.UTF_8).use { it.readText() })
 
   init {
     val assets = ctx.assets
@@ -37,6 +38,6 @@ class I18n(ctx: Context) {
 
   fun t(k: String): String {
     val v = map.optString(k, "")
-    return if (v.isNotEmpty()) v else k
+    return if (v.isNotEmpty()) v else fallback.optString(k, k)
   }
 }
