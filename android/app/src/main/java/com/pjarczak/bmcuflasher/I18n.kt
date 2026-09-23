@@ -18,8 +18,9 @@ class I18n(ctx: Context) {
 
     val lang = detectLang(ctx)
     val file = if (lang in available) "$lang.json" else "en.json"
-    val s = assets.open(file).bufferedReader(Charsets.UTF_8).readText()
-    map = JSONObject(s)
+    map = if (file == "en.json") fallback else {
+      JSONObject(assets.open(file).bufferedReader(Charsets.UTF_8).use { it.readText() })
+    }
   }
 
   private fun detectLang(ctx: Context): String {

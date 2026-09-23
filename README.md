@@ -109,6 +109,16 @@ Empty files and images above 65,520 bytes are rejected before opening the serial
 port: the existing 56-byte ISP transfers must fit in the board's 64 KiB flash.
 This size check does not identify whether a firmware image matches your board.
 
+CLI (optional):
+- USB (auto port by VID/PID):
+```bash
+python3 bmcu_flasher.py firmware.bin --mode usb
+```
+- TTL (manual BOOT+RESET, port required):
+```bash
+  python3 bmcu_flasher.py firmware.bin --mode ttl --port /dev/ttyUSB0
+```
+
 ## Building Android
 
 Use JDK 17 or newer, Android SDK platform 35 and the checked-in Gradle 9.1.0 wrapper.
@@ -122,9 +132,8 @@ cd android
 On Linux/macOS use `bash ./gradlew` instead. The APK is written to
 `android/app/build/outputs/apk/release/app-release.apk`.
 
-GitHub Actions: **Android APK** builds on Android/i18n branch changes and pull
-requests. Once the workflow is on the default branch, it also supports
-**Run workflow**. Download the APK and SHA-256 from the
+GitHub Actions: **Android APK** builds on Android/i18n changes to `main`, checks
+pull requests, and supports **Run workflow**. Download the APK and SHA-256 from the
 `BMCU-Flasher-NoNo-android` artifact; test/lint reports are a separate artifact.
 The existing `v*` tag workflow also builds the APK alongside desktop releases.
 
@@ -133,16 +142,6 @@ project. Local and GitHub builds can have different signing certificates; if
 Android reports an incompatible signature, uninstall the previous test app
 before installing (this clears its app data). Stable release signing requires
 a persistent private signing key and is not configured here.
-
-CLI (optional):
-- USB (auto port by VID/PID):
-```bash
-python3 bmcu_flasher.py firmware.bin --mode usb
-```
-- TTL (manual BOOT+RESET, port required):
-```bash
-  python3 bmcu_flasher.py firmware.bin --mode ttl --port /dev/ttyUSB0
-```
 
 ## License
 MIT - see LICENSE.

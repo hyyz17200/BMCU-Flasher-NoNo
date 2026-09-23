@@ -4,8 +4,8 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.security.MessageDigest
 
-/** An immutable-in-use snapshot: the document provider is never reopened for flashing. */
-data class LocalFirmware(val name: String, val bytes: ByteArray) {
+/** Keeps selected bytes in memory so flashing never reopens the document. */
+class LocalFirmware(val name: String, val bytes: ByteArray) {
   val sha256: String = MessageDigest.getInstance("SHA-256")
     .digest(bytes).joinToString("") { "%02x".format(it.toInt() and 0xff) }
 
